@@ -10,9 +10,9 @@ Subscribe to the server by sending a websocket connection message
 
 ### Using Docker   
 
-docker-compose pull
-docker-compose build
-docker-compose up
+`docker-compose pull`   
+`docker-compose build`   
+`docker-compose up`   
 
 ### Asynchronous tasks
 
