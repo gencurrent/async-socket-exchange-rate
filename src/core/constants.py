@@ -1,0 +1,5 @@
+"""
+Core constants
+"""
+
+EURUSD = "EURUSD"

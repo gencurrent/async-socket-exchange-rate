@@ -1,0 +1,46 @@
+
+x-app-build: &app-build
+  context: .
+  args:
+    - WORKDIR=/app/code
+  dockerfile: compose/Dockerfile
+
+x-app: &app-base
+  volumes:
+    - ./src:/app/src
+  env_file:
+    - compose/envs/common.env
+
+services:
+  backend:
+    <<: *app-base
+    build:
+      <<: *app-build
+    restart: always
+    ports:
+        - 8080:8080
+    depends_on:
+      - db
+
+  async_tasks:
+    <<: *app-base
+    build:
+      <<: *app-build
+    depends_on:
+      - db
+    command: poetry run python async_tasks/async_periodic_tasks.py
+
+  db:
+    image: mongo:7.0
+    env_file:
+      - compose/envs/common.env
+    ports:
+      - 27017:27017
+    volumes:
+        - db-mongo-data:/data/db
+    logging:
+      driver: none
+
+
+volumes:
+  db-mongo-data:

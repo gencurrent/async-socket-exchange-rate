@@ -1,0 +1,3 @@
+"""
+The Exchange rate application
+"""
