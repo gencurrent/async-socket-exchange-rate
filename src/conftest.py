@@ -8,6 +8,7 @@ from datetime import datetime
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from fastapi.testclient import TestClient
 
 from core.constants import EURUSD
 from db.models import Asset, ExchangeRate
@@ -40,13 +41,21 @@ async def db():
     await db.client.drop_database(db)
 
 @pytest_asyncio.fixture()
-async def test_client(db) -> AsyncClient:
-    """Fixture of a AsyncClient"""
+async def test_client(db) -> TestClient:
+    """Yield an test requests client"""
+    from app import app
+
+    client = TestClient(app=app, base_url="http://test")
+    return client
+
+
+@pytest_asyncio.fixture()
+async def test_async_client(db) -> AsyncClient:
+    """Yield an test requests client"""
     from app import app
 
     async with AsyncClient(app=app, base_url="http://test") as ac:
-        return ac
-
+        yield ac
 
 @pytest_asyncio.fixture()
 async def assets(db) -> List[Asset]:

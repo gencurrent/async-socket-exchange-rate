@@ -1,11 +1,10 @@
 """
-The exchange rate client service to handle the exchange rates logic
+The Exchange rate application client service to handle the exchange rates logic
 """
 
 import asyncio
 from typing import List
 from datetime import datetime, timedelta
-from functools import wraps
 
 from fastapi import WebSocket
 from loguru import logger as _LOG
@@ -43,13 +42,13 @@ class ExchangeRateClientService:
         """Set a new asset_id"""
         if not isinstance(asset_id, int):
             return single_error_rpc_response(
-                "subscribe", error="`assetId` must be integer"
+                action="subscribe", error="`assetId` must be integer"
             )
         # Fetch the Asset record
         asset = await Asset.find_one(Asset.id == asset_id)
         if not asset:
             return single_error_rpc_response(
-                "subscribe", error="Asset with id={asset} is not found"
+                action="subscribe", error="Asset with id={asset} is not found"
             )
         self.asset = asset
 
@@ -95,12 +94,12 @@ class ExchangeRateClientService:
         message = ExchangeRateAssetHistoryMessageModel(points=points)
         yield RPCMessageModel(action="asset_history", message=message.model_dump())
 
-        # Yield live new exchange rate points
-        # Return the new live data
+        # Yield new exchange rate points live
         if not exchange_rates:
             yield RPCMessageModel(
                 action="points", message={"errors": [{"msg": "No points to return"}]}
             )
+            return
         last_er = exchange_rates[-1]
         while True:
             exchange_rate = await ExchangeRate.find_one(
