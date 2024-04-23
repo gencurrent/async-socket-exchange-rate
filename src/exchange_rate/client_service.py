@@ -7,18 +7,17 @@ import asyncio
 from typing import Any, AsyncGenerator, Coroutine, List
 from datetime import datetime, timedelta
 
-from fastapi import WebSocket
 from loguru import logger as _LOG
 from pymongo import DESCENDING
 
+from db.models import Asset, ExchangeRate
 from exchange_rate.models import (
     AssetsMessageModel,
     ExchangeRatePointModel,
     ExchangeRateAssetHistoryMessageModel,
 )
-from db.models import Asset, ExchangeRate
-from rpc.models import RPCMessageModel, RPCErrorMessageModel
 from exchange_rate.utils import single_error_rpc_response
+from rpc.models import RPCMessageModel, RPCErrorMessageModel
 
 
 class AbstractExchangeRateClientService(abc.ABC):

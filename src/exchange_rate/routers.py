@@ -4,14 +4,13 @@ Exchange rate application router
 
 import asyncio
 from json.decoder import JSONDecodeError
-from typing import Any, Coroutine, Dict, List, Tuple
+from typing import Any, Coroutine, Dict, List
 
 
 from loguru import logger as _LOG
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ValidationError
 
-from db.models import Asset
 from exchange_rate.client_service import (
     AbstractExchangeRateClientService,
     ExchangeRateClientService,
