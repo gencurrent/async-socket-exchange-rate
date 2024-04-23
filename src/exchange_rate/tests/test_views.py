@@ -3,8 +3,8 @@ Test views
 """
 
 import pytest
-from fastapi.testclient import TestClient
 from fastapi import WebSocket
+from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 
@@ -44,6 +44,7 @@ async def test_socket__unknown_action(test_client: TestClient) -> None:
     message = response["message"]
 
     assert message == {"errors": [{"msg": "Unknown action"}]}
+
 
 @pytest.mark.skip(
     reason="Async websockets are not supported yet in FastAPI. "

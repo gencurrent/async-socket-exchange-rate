@@ -4,36 +4,35 @@ The Exchange rate application client service to handle the exchange rates logic
 
 import abc
 import asyncio
-from typing import Any, AsyncGenerator, Coroutine, List
 from datetime import datetime, timedelta
+from typing import Any, AsyncGenerator, Coroutine, List
 
-from loguru import logger as _LOG
 from pymongo import DESCENDING
 
 from db.models import Asset, ExchangeRate
 from exchange_rate.models import (
     AssetsMessageModel,
-    ExchangeRatePointModel,
     ExchangeRateAssetHistoryMessageModel,
+    ExchangeRatePointModel,
 )
 from exchange_rate.utils import single_error_rpc_response
-from rpc.models import RPCMessageModel, RPCErrorMessageModel
+from rpc.models import RPCErrorMessageModel, RPCMessageModel
 
 
 class AbstractExchangeRateClientService(abc.ABC):
     """Abstract exchange rate per client service"""
 
     @abc.abstractmethod
+    async def rpc_assets(self) -> AsyncGenerator[RPCMessageModel, Any]:
+        """
+        Yield the list of available assets
+        """
+
+    @abc.abstractmethod
     async def rpc_switch_asset_id(self, asset_id: int) -> Coroutine:
         """
         Set the new asset by ID
         :param int asset_id: ID of the asset
-        """
-
-    @abc.abstractmethod
-    async def rpc_assets(self) -> AsyncGenerator[RPCMessageModel, Any]:
-        """
-        Yield the list of available assets
         """
 
     @abc.abstractmethod
@@ -75,20 +74,6 @@ class ExchangeRateClientService:
                 action="subscribe", error="Asset with id={asset} does not exist"
             )
         self.asset = asset
-
-    async def get_exchange_rate_history(self) -> List[ExchangeRate]:
-        # Return the past 30 minutes ExchangeRates
-        timestamp_from = int((datetime.now() - timedelta(minutes=30)).timestamp())
-        exchange_rates = (
-            await ExchangeRate.find(
-                ExchangeRate.asset.id == self.asset.id,
-                ExchangeRate.time >= timestamp_from,
-                fetch_links=True,
-            )
-            .sort(-ExchangeRate.time)
-            .to_list()
-        )
-        return exchange_rates
 
     async def rpc_assets(self) -> AsyncGenerator[RPCMessageModel, Any]:
         """
@@ -138,6 +123,20 @@ class ExchangeRateClientService:
                 await asyncio.sleep(sleep_timedelta)
             else:
                 await asyncio.sleep(0.2)
+
+    async def get_exchange_rate_history(self) -> List[ExchangeRate]:
+        # Return the past 30 minutes ExchangeRates
+        timestamp_from = int((datetime.now() - timedelta(minutes=30)).timestamp())
+        exchange_rates = (
+            await ExchangeRate.find(
+                ExchangeRate.asset.id == self.asset.id,
+                ExchangeRate.time >= timestamp_from,
+                fetch_links=True,
+            )
+            .sort(-ExchangeRate.time)
+            .to_list()
+        )
+        return exchange_rates
 
     async def _get_assets(self) -> List[Asset]:
         """Get a list of assets"""

@@ -3,10 +3,10 @@ Test RPC models
 """
 
 import pytest
+from pydantic import ValidationError
 
 from rpc.models import RPCMessageModel
 
-from pydantic import ValidationError
 
 @pytest.mark.asyncio
 async def test_rpc_message_model():

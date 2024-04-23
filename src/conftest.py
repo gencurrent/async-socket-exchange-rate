@@ -2,23 +2,22 @@
 The main conftest file
 """
 
-from typing import List
 from datetime import datetime
+from typing import List
+from unittest.mock import Mock, patch
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 from core.constants import EURUSD
 from db.models import Asset, ExchangeRate
 from settings.settings import Settings
-from unittest.mock import patch, Mock
 
 
 @pytest.fixture(scope="session", autouse=True)
 def test_settings():
-
     settings_mock = Mock(spec=Settings)
     settings_instance = Settings()
     for field in settings_instance.model_fields_set:
@@ -40,6 +39,7 @@ async def db():
     yield db
     await db.client.drop_database(db)
 
+
 @pytest_asyncio.fixture()
 async def test_client(db) -> TestClient:
     """Yield an test requests client"""
@@ -57,6 +57,7 @@ async def test_async_client(db) -> AsyncClient:
     async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac
 
+
 @pytest_asyncio.fixture()
 async def assets(db) -> List[Asset]:
     """Initialize Assets according to the .env settings"""
@@ -68,6 +69,7 @@ async def assets(db) -> List[Asset]:
 async def asset(assets) -> Asset:
     """Fixture of a single Asset instance"""
     return await Asset.find_one(Asset.name == EURUSD)
+
 
 @pytest_asyncio.fixture()
 async def exchange_rate(asset: Asset) -> ExchangeRate:

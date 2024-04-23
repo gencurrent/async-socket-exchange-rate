@@ -7,14 +7,14 @@ import re
 from typing import Any, Dict, List
 
 import httpx
-from loguru import logger as _LOG
-from pymongo.errors import DuplicateKeyError
 from beanie.exceptions import RevisionIdWasChanged
 from beanie.operators import Set
+from loguru import logger as _LOG
+from pymongo.errors import DuplicateKeyError
 
-from settings import settings
 from async_tasks.emcont_service.models import EmcontExchangeRate
 from db.models import Asset, ExchangeRate
+from settings import settings
 
 
 class EmcontService:
@@ -67,17 +67,13 @@ class EmcontService:
             _LOG.info(f"Assets are not set")
             return
         exchange_rates_data_list = await self.fetch_exchange_rates_data()
-        exchange_rates_data_dict = self.exchange_rates_data_to_dict(
-            exchange_rates_data_list
-        )
+        exchange_rates_data_dict = self.exchange_rates_data_to_dict(exchange_rates_data_list)
         # Find the matching asset
         records_saved_number: int = 0
         for asset in self._assets:
             exchange_rates_data = exchange_rates_data_dict[asset.name]
 
-            emcon_exchange_rate_dto = EmcontExchangeRate(
-                asset=asset, **exchange_rates_data
-            )
+            emcon_exchange_rate_dto = EmcontExchangeRate(asset=asset, **exchange_rates_data)
             exchange_rate = emcon_exchange_rate_dto.to_exchange_rate()
             try:
                 update_query = await ExchangeRate.find_one(

@@ -6,9 +6,8 @@ import asyncio
 from json.decoder import JSONDecodeError
 from typing import Any, Coroutine, Dict, List
 
-
-from loguru import logger as _LOG
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from loguru import logger as _LOG
 from pydantic import BaseModel, ValidationError
 
 from exchange_rate.client_service import (
@@ -17,8 +16,7 @@ from exchange_rate.client_service import (
 )
 from exchange_rate.models import RPCSubscribeMessageModel
 from exchange_rate.utils import single_error_rpc_response
-from rpc.models import RPCMessageModel, RPCErrorMessageModel
-
+from rpc.models import RPCErrorMessageModel, RPCMessageModel
 
 ASSET_ID_FIELD = "assetId"
 
@@ -49,9 +47,7 @@ class WebSocketConnectionManager:
         """Handle the client disconnection"""
         del self._connections[websocket]
 
-    def get_client_service(
-        self, websocket: WebSocket
-    ) -> AbstractExchangeRateClientService:
+    def get_client_service(self, websocket: WebSocket) -> AbstractExchangeRateClientService:
         """Get the related ExchangeRateClientService"""
         service = self._connections[websocket][self.CLIENT_SERVICE]
         return service
@@ -66,9 +62,7 @@ class WebSocketConnectionManager:
         try:
             json_command = await websocket.receive_json()
         except JSONDecodeError:
-            await CONNECTION_MANAGER.send_message(
-                websocket, "Could not parse the JSON command"
-            )
+            await CONNECTION_MANAGER.send_message(websocket, "Could not parse the JSON command")
             return None
         if not isinstance(json_command, dict):
             await CONNECTION_MANAGER.send_message(
@@ -119,14 +113,13 @@ async def exchange_rate(websocket: WebSocket):
     Subscribe to relevant, up-to-date exchange rates
     """
     await CONNECTION_MANAGER.connect(websocket)
-    client_service: AbstractExchangeRateClientService = (
-        CONNECTION_MANAGER.get_client_service(websocket)
+    client_service: AbstractExchangeRateClientService = CONNECTION_MANAGER.get_client_service(
+        websocket
     )
     try:
         while True:
-
-            rpc_message: RPCMessageModel | None = (
-                await CONNECTION_MANAGER.receive_command(websocket)
+            rpc_message: RPCMessageModel | None = await CONNECTION_MANAGER.receive_command(
+                websocket
             )
             if not rpc_message:
                 continue
@@ -138,9 +131,7 @@ async def exchange_rate(websocket: WebSocket):
                 case "subscribe":
                     await handle_subscribe_action(websocket, rpc_message)
                 case _:
-                    error_message = single_error_rpc_response(
-                        rpc_message.action, "Unknown action"
-                    )
+                    error_message = single_error_rpc_response(rpc_message.action, "Unknown action")
                     await CONNECTION_MANAGER.send_message(websocket, error_message)
     except WebSocketDisconnect:
         CONNECTION_MANAGER.disconnect(websocket)
@@ -149,7 +140,6 @@ async def exchange_rate(websocket: WebSocket):
 async def handle_subscribe_action(
     websocket: WebSocket, rpc_message: RPCMessageModel
 ) -> Coroutine[Any, Any, None]:
-
     try:
         rpc_subscribe_message_model = RPCSubscribeMessageModel(**rpc_message.message)
     except ValidationError as exception:
@@ -158,12 +148,10 @@ async def handle_subscribe_action(
         return
 
     # Subscribe
-    client_service: AbstractExchangeRateClientService = (
-        CONNECTION_MANAGER.get_client_service(websocket)
+    client_service: AbstractExchangeRateClientService = CONNECTION_MANAGER.get_client_service(
+        websocket
     )
-    error_message = await client_service.rpc_switch_asset_id(
-        rpc_subscribe_message_model.asset_id
-    )
+    error_message = await client_service.rpc_switch_asset_id(rpc_subscribe_message_model.asset_id)
     if error_message:
         await CONNECTION_MANAGER.send_message(websocket, error_message)
         return

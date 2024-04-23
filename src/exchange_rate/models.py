@@ -3,6 +3,7 @@ Exchange rate transformation models
 """
 
 from typing import List
+
 from pydantic import BaseModel, Field, field_validator
 
 from db.models import Asset, ExchangeRate
@@ -12,7 +13,9 @@ class RPCSubscribeMessageModel(BaseModel):
     """
     Data model contained in the `message` field of the RPCMessageModel to handle `subscribe`
     """
+
     asset_id: int = Field(alias="assetId", description="ID of the related Asset")
+
 
 class ExchangeRatePointModel(BaseModel):
     """Point model related to the ExchangeRate record"""
@@ -23,9 +26,7 @@ class ExchangeRatePointModel(BaseModel):
     value: float = Field(description="Value")
 
     @classmethod
-    def from_exchange_rate(
-        cls, exchange_rate: ExchangeRate
-    ) -> "ExchangeRatePointModel":
+    def from_exchange_rate(cls, exchange_rate: ExchangeRate) -> "ExchangeRatePointModel":
         """
         Yield an ExchangeRatePointModel instance from ExchangeRate
         """
@@ -48,4 +49,5 @@ class AssetsMessageModel(BaseModel):
     """
     List of Assets - container of the `message` field on the `assets` action response
     """
+
     assets: List[Asset] = Field(description="List of assets")

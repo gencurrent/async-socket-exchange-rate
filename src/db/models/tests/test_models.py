@@ -2,12 +2,12 @@
 Unit tests for the DB models
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 import pytest
-from bson.dbref import DBRef
 from beanie.odm.fields import PydanticObjectId
 from beanie.operators import Set
+from bson.dbref import DBRef
 from pymongo.errors import DuplicateKeyError
 from pymongo.results import UpdateResult
 
@@ -128,7 +128,6 @@ async def test_exchange_rate_model__conditional_create(db):
     # The only ExchangeRate in the DB is the inserted one
     assert await ExchangeRate.find(fetch_links=True).first_or_none() == exchange_rate
 
-
     # Create if does not exist for the 2nd time
     new_value = 2
     update_result: UpdateResult = await ExchangeRate.find_one(
@@ -142,7 +141,7 @@ async def test_exchange_rate_model__conditional_create(db):
             value=value,
         ),
     )
-    
+
     assert update_result.upserted_id is None
     assert update_result.raw_result["updatedExisting"] is True
     exchange_rate = await ExchangeRate.find(fetch_links=True).first_or_none()
