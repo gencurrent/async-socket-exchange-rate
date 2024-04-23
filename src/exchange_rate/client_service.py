@@ -92,15 +92,11 @@ class ExchangeRateClientService:
         """
         exchange_rates = await self.get_exchange_rate_history()
         if not exchange_rates:
-            yield single_error_rpc_response(
-                action="points", error="No points to return"
-            )
+            yield single_error_rpc_response(action="points", error="No points to return")
             return
 
         # Yield the asset history points message
-        points = [
-            ExchangeRatePointModel.from_exchange_rate(er) for er in exchange_rates
-        ]
+        points = [ExchangeRatePointModel.from_exchange_rate(er) for er in exchange_rates]
         message = ExchangeRateAssetHistoryMessageModel(points=points)
         yield RPCMessageModel(action="asset_history", message=message.model_dump())
 
