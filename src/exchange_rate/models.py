@@ -3,10 +3,16 @@ Exchange rate transformation models
 """
 
 from typing import List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from db.models import Asset, ExchangeRate
 
+
+class RPCSubscribeMessageModel(BaseModel):
+    """
+    Data model contained in the `message` field of the RPCMessageModel to handle `subscribe`
+    """
+    asset_id: int = Field(alias="assetId", description="ID of the related Asset")
 
 class ExchangeRatePointModel(BaseModel):
     """Point model related to the ExchangeRate record"""

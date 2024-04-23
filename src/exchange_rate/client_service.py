@@ -25,15 +25,7 @@ class AbstractExchangeRateClientService(abc.ABC):
     """Abstract exchange rate per client service"""
 
     @abc.abstractmethod
-    async def rpc_switch_asset_id(self, asset_id: Asset.id) -> None:
-        """
-        Set the new asset by ID
-        :param int asset_id: ID of the asset
-        :returns None:
-        """
-
-    @abc.abstractmethod
-    async def rpc_switch_asset_id(self, asset_id: Asset.id) -> Coroutine:
+    async def rpc_switch_asset_id(self, asset_id: int) -> Coroutine:
         """
         Set the new asset by ID
         :param int asset_id: ID of the asset
@@ -53,10 +45,14 @@ class AbstractExchangeRateClientService(abc.ABC):
             listen to the new ExchangeRate records live
         """
 
+
 class ExchangeRateClientService:
+    """
+    Exchange Rate app client service to handle client-specific data
+    """
 
     def __init__(self):
-        """Initialize"""
+        """A new instance of ExchangeRateClientService"""
         self._asset: Asset | None = None
 
     @property
@@ -71,24 +67,16 @@ class ExchangeRateClientService:
             raise TypeError(f"{Asset} type is required")
         self._asset = asset
 
-    async def rpc_switch_asset_id(self, asset_id: int) -> Coroutine:
+    async def rpc_switch_asset_id(self, asset_id: int) -> RPCErrorMessageModel | None:
         """Set a new asset_id"""
-        if not isinstance(asset_id, int):
-            return single_error_rpc_response(
-                action="subscribe", error="`assetId` must be integer"
-            )
         # Fetch the Asset record
         asset = await Asset.find_one(Asset.id == asset_id)
         if not asset:
             return single_error_rpc_response(
-                action="subscribe", error="Asset with id={asset} is not found"
+                action="subscribe", error="Asset with id={asset} does not exist"
             )
         self.asset = asset
 
-    async def get_assets(self) -> List[Asset]:
-        """Get a list of assets"""
-        return await Asset.find().to_list()
-    
     async def get_exchange_rate_history(self) -> List[ExchangeRate]:
         # Return the past 30 minutes ExchangeRates
         timestamp_from = int((datetime.now() - timedelta(minutes=30)).timestamp())
@@ -107,7 +95,7 @@ class ExchangeRateClientService:
         """
         Yield the list of available assets
         """
-        assets = await self.get_assets()
+        assets = await self._get_assets()
         message = AssetsMessageModel(assets=assets)
         rpc_message = RPCMessageModel(action="assets", message=message.model_dump())
         yield rpc_message
@@ -120,9 +108,11 @@ class ExchangeRateClientService:
         """
         exchange_rates = await self.get_exchange_rate_history()
         if not exchange_rates:
-            yield single_error_rpc_response(action="points", error="No points to return")
+            yield single_error_rpc_response(
+                action="points", error="No points to return"
+            )
             return
-        
+
         # Yield the asset history points message
         points = [
             ExchangeRatePointModel.from_exchange_rate(er) for er in exchange_rates
@@ -149,3 +139,7 @@ class ExchangeRateClientService:
                 await asyncio.sleep(sleep_timedelta)
             else:
                 await asyncio.sleep(0.2)
+
+    async def _get_assets(self) -> List[Asset]:
+        """Get a list of assets"""
+        return await Asset.find().to_list()
