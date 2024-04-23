@@ -71,7 +71,7 @@ class ExchangeRateClientService:
         asset = await Asset.find_one(Asset.id == asset_id)
         if not asset:
             return single_error_rpc_response(
-                action="subscribe", error="Asset with id={asset} does not exist"
+                action="subscribe", error=f"Asset with id={asset_id} does not exist"
             )
         self.asset = asset
 
