@@ -3,15 +3,16 @@ Pydantic models for server specification
 """
 
 from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 from db.models import Asset, ExchangeRate
 
+
 class EmcontExchangeRate(BaseModel):
     """DTO model"""
 
-    asset: Asset | None = \
-        Field(description="The corresponding Asset from the DB")
+    asset: Asset | None = Field(description="The corresponding Asset from the DB")
     symbol: str = Field(alias="Symbol")
     bid: float = Field(alias="Bid")
     ask: float = Field(alias="Ask")
@@ -33,10 +34,6 @@ class EmcontExchangeRate(BaseModel):
         now_timestamp = int(now.timestamp())
 
         value = (self.bid + self.ask) / 2
-        
-        exchange_rate = ExchangeRate(
-            asset=self.asset,
-            time=now_timestamp,
-            value=value
-        )
+
+        exchange_rate = ExchangeRate(asset=self.asset, time=now_timestamp, value=value)
         return exchange_rate

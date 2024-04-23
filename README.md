@@ -3,40 +3,40 @@ A simple web server streaming up-to-date exchange rates to the subscribed client
 
 # Usage
 
-Subscribe to the server by sending a websocket connection message   
+Subscribe to the server by sending a websocket connection message
 
 
-## Launching   
+## Launching
 
-### Using Docker   
+### Using Docker
 
-`docker compose pull`   
-`docker compose build`   
-`docker compose up`   
+`docker compose pull`
+`docker compose build`
+`docker compose up`
 
 ### Asynchronous tasks
 
 Run asynchornous tasks manually:
-`docker compose exec backend bash`   
-`poetry run python async_tasks/async_periodic_tasks.py`   
+`docker compose exec backend bash`
+`poetry run python async_tasks/async_periodic_tasks.py`
 
-### Mongo   
-Connect to the Mongo DB instance:   
-`docker compose exec db sh`    
-`mongosh $MONGO_CONNECTION_URI`   
+### Mongo
+Connect to the Mongo DB instance:
+`docker compose exec db sh`
+`mongosh $MONGO_CONNECTION_URI`
 `show dbs`  to list all the databases
 `use db`  to switch to the backend database
 
 
 ## Websocket actions
 
-The only application endpoint is   
-Endpoint: `"/"`   
+The only application endpoint is
+Endpoint: `"/"`
 
 ### 1. Retreive the available assets
 
-message: `"{"action": "assets", "message": {}}"`   
-Response sample:   
+message: `"{"action": "assets", "message": {}}"`
+Response sample:
 ```JSON
 {
     "action": "assets",
@@ -57,9 +57,9 @@ Response sample:
 
 ### 2. Subscribe to the specified asset
 
-Endpoint: `"/"`   
-Message: `"{"action": "subscribe", "message": {"assetId": 1}}"`   
-Response sample:   
+Endpoint: `"/"`
+Message: `"{"action": "subscribe", "message": {"assetId": 1}}"`
+Response sample:
 ```JSON
 {
     "message": {
@@ -83,9 +83,9 @@ Response sample:
 ```
 
 
-# Technical details   
+# Technical details
 
-## Stack   
+## Stack
 
 * Python
   * Poetry
@@ -93,3 +93,11 @@ Response sample:
   * Motor
 * MongoDB
 * Docker / Docker-compose
+
+
+## Contribute
+
+Install pre-commit
+`poetry add pre-commit`
+Init pre-commit by installing the hooks
+`poetry run pre-commit install`

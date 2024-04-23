@@ -7,14 +7,14 @@ from typing import Annotated
 
 import pymongo
 from beanie import Document, Indexed, Insert, Link, Replace, before_event
-from beanie.operators import In
 from beanie.odm.queries.find import FindMany
-from pydantic import NaiveDatetime, Field
-from pymongo.results import InsertManyResult
+from beanie.operators import In
+from pydantic import Field, NaiveDatetime
 from pymongo.errors import BulkWriteError
+from pymongo.results import InsertManyResult
 
-from settings import settings
 from db.models.exceptions import AlreadyPopulatedException
+from settings import settings
 
 
 class Asset(Document):
@@ -29,7 +29,7 @@ class Asset(Document):
     name: Indexed(str, unique=True) = Field()
 
     @classmethod
-    async def initialize_assets(cls, raise_exception = True) -> InsertManyResult:
+    async def initialize_assets(cls, raise_exception=True) -> InsertManyResult:
         """
         Initialize the list of assets from the settings
         :returns InsertManyResult: The insertion result
@@ -48,8 +48,7 @@ class Asset(Document):
         except BulkWriteError as exc:
             if raise_exception:
                 raise AlreadyPopulatedException from exc
-        
-    
+
     @staticmethod
     def find_assets_from_settings() -> FindMany:
         """Find assets from the asset list in settings"""
@@ -63,6 +62,7 @@ class Asset(Document):
 
 class ExchangeRate(Document):
     """Exchange rate Mongo model"""
+
     asset: Link[Asset] = Field(description="Asset corresponding with the pair")
     time: int = Field(description="Exact creation timestamp")
     value: float = Field(description="Average rate")

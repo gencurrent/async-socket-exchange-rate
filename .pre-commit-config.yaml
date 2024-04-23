@@ -1,0 +1,27 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: end-of-file-fixer
+        files: ^src/
+      - id: trailing-whitespace
+        files: ^src/
+      - id: name-tests-test
+        args: ['--pytest-test-first']
+        files: ^src/test_*.py
+        exclude: (^integration_tests/)|(tests/factories.py)|(tests/base.py)
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort (python)
+        files: ^src/
+        args: ["-m3", "-w100"]
+  - repo: https://github.com/psf/black
+    rev: 24.4.0
+    hooks:
+      - id: black
+        files: ^src/
+        exclude: ^(integration_tests/|setup.py)|migrations
+        args: [--config=./pyproject.toml]
+

@@ -5,10 +5,7 @@ Test Exchange Rate pydantic models
 import pytest
 
 from db.models import ExchangeRate
-from exchange_rate.models import (
-    ExchangeRateAssetHistoryMessageModel,
-    ExchangeRatePointModel,
-)
+from exchange_rate.models import ExchangeRateAssetHistoryMessageModel, ExchangeRatePointModel
 
 
 @pytest.mark.asyncio
@@ -41,6 +38,4 @@ def test_exchange_rate_asset_history_message_model__json(exchange_rate: Exchange
     data = instance.model_dump()
 
     # The nested documents are dumped into the JSON-compatible structures
-    assert data["points"] == [
-        er_point.model_dump() for er_point in exchange_rate_points
-    ]
+    assert data["points"] == [er_point.model_dump() for er_point in exchange_rate_points]

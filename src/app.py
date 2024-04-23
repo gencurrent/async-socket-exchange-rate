@@ -4,13 +4,12 @@ The main file yielding the application instance
 
 from contextlib import asynccontextmanager
 
-from loguru import logger as _LOG
 from fastapi import FastAPI
+from loguru import logger as _LOG
 
 from db.database import initialize_database
 from db.models import Asset
 from exchange_rate.routers import router as exchange_rate_router
-
 
 
 @asynccontextmanager

@@ -1,4 +1,5 @@
 from typing import List
+
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -12,7 +13,7 @@ class Settings(BaseSettings):
 
     SERVER_HOST: str = Field(default="0.0.0.0")
     SERVER_PORT: int = Field(default=8000)
-    
+
     ASSET_LIST: List[str] = Field(default=[])
 
     # Mongo DB

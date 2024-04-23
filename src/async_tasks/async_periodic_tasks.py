@@ -13,10 +13,7 @@ from loguru import logger as _LOG
 # The application root dir is the parent dir
 sys.path.insert(1, os.getcwd())
 from async_tasks.emcont_service.service import EmcontService
-
-
 from db.database import initialize_database
-
 
 EMCONT_SERVICE = EmcontService()
 
@@ -44,7 +41,7 @@ async def main():
     NUMBER_OF_TASKS = 8
     # Launch the periodic tasks
     for idx in range(NUMBER_OF_TASKS):
-        task = asyncio.create_task(periodic(1/NUMBER_OF_TASKS, get_and_save_exchnage_rates, idx))
+        task = asyncio.create_task(periodic(1 / NUMBER_OF_TASKS, get_and_save_exchnage_rates, idx))
 
     while True:
         await asyncio.sleep(0.4)
