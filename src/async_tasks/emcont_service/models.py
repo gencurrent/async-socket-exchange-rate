@@ -3,7 +3,7 @@ Pydantic models for server specification
 """
 
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from db.models import Asset, ExchangeRate
 

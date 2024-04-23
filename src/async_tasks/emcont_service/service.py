@@ -32,7 +32,7 @@ class EmcontService:
         self._assets = await Asset.find_assets_from_settings().to_list()
         if self._assets:
             return
-        await Asset.initialize_assets()
+        await Asset.initialize_assets(raise_exception=False)
         self._assets = await Asset.find_assets_from_settings().to_list()
 
     def _extract_rates(self, text) -> List[Any]:

@@ -20,7 +20,8 @@ async def test_rpc_message_model():
     with pytest.raises(ValidationError) as exception:
         RPCMessageModel(action="assets", message="", message2="")
 
-    errors = exception.value.errors()
+    original_exception = exception.value
+    errors = original_exception.errors()
     error = errors[0]
     assert error["loc"][0] == "message"
     assert error["msg"] == "Input should be a valid dictionary"
@@ -29,7 +30,8 @@ async def test_rpc_message_model():
     with pytest.raises(ValidationError) as exception:
         RPCMessageModel(action="assets")
 
-    errors = exception.value.errors()
+    original_exception = exception.value
+    errors = original_exception.errors()
     error = errors[0]
     assert error["loc"][0] == "message"
     assert error["msg"] == "Field required"

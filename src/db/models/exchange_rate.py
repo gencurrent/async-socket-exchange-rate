@@ -29,7 +29,7 @@ class Asset(Document):
     name: Indexed(str, unique=True) = Field()
 
     @classmethod
-    async def initialize_assets(cls) -> InsertManyResult:
+    async def initialize_assets(cls, raise_exception = True) -> InsertManyResult:
         """
         Initialize the list of assets from the settings
         :returns InsertManyResult: The insertion result
@@ -46,7 +46,8 @@ class Asset(Document):
         try:
             return await cls.insert_many(assets)
         except BulkWriteError as exc:
-            raise AlreadyPopulatedException from exc
+            if raise_exception:
+                raise AlreadyPopulatedException from exc
         
     
     @staticmethod
