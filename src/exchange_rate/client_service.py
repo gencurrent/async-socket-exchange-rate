@@ -2,8 +2,9 @@
 The Exchange rate application client service to handle the exchange rates logic
 """
 
+import abc
 import asyncio
-from typing import List
+from typing import Any, AsyncGenerator, Coroutine, List
 from datetime import datetime, timedelta
 
 from fastapi import WebSocket
@@ -20,25 +21,57 @@ from rpc.models import RPCMessageModel, RPCErrorMessageModel
 from exchange_rate.utils import single_error_rpc_response
 
 
+class AbstractExchangeRateClientService(abc.ABC):
+    """Abstract exchange rate per client service"""
+
+    @abc.abstractmethod
+    async def rpc_switch_asset_id(self, asset_id: Asset.id) -> None:
+        """
+        Set the new asset by ID
+        :param int asset_id: ID of the asset
+        :returns None:
+        """
+
+    @abc.abstractmethod
+    async def rpc_switch_asset_id(self, asset_id: Asset.id) -> Coroutine:
+        """
+        Set the new asset by ID
+        :param int asset_id: ID of the asset
+        """
+
+    @abc.abstractmethod
+    async def rpc_assets(self) -> AsyncGenerator[RPCMessageModel, Any]:
+        """
+        Yield the list of available assets
+        """
+
+    @abc.abstractmethod
+    async def rpc_subscribe(self) -> AsyncGenerator[RPCMessageModel, Any]:
+        """
+        Subscribe to the ExchangeRate data for the specified asset:
+            get data for last 30 mins;
+            listen to the new ExchangeRate records live
+        """
+
 class ExchangeRateClientService:
 
     def __init__(self):
-
+        """Initialize"""
         self._asset: Asset | None = None
 
     @property
     def asset(self) -> Asset | None:
-        """Getter"""
+        """Get the current asset"""
         return self._asset
 
     @asset.setter
     def asset(self, asset: Asset) -> None:
-        """Set the asset"""
+        """Set the current asset"""
         if not isinstance(asset, Asset):
             raise TypeError(f"{Asset} type is required")
         self._asset = asset
 
-    async def rpc_switch_asset_id(self, asset_id: int):
+    async def rpc_switch_asset_id(self, asset_id: int) -> Coroutine:
         """Set a new asset_id"""
         if not isinstance(asset_id, int):
             return single_error_rpc_response(
@@ -55,16 +88,7 @@ class ExchangeRateClientService:
     async def get_assets(self) -> List[Asset]:
         """Get a list of assets"""
         return await Asset.find().to_list()
-
-    async def rpc_assets_message(self):
-        """
-        Get the list of available assets
-        """
-        assets = await self.get_assets()
-        message = AssetsMessageModel(assets=assets)
-        rpc_message = RPCMessageModel(action="assets", message=message.model_dump())
-        yield rpc_message
-
+    
     async def get_exchange_rate_history(self) -> List[ExchangeRate]:
         # Return the past 30 minutes ExchangeRates
         timestamp_from = int((datetime.now() - timedelta(minutes=30)).timestamp())
@@ -79,15 +103,27 @@ class ExchangeRateClientService:
         )
         return exchange_rates
 
-    async def rpc_subscribe_message(self, websocket: WebSocket):
+    async def rpc_assets(self) -> AsyncGenerator[RPCMessageModel, Any]:
+        """
+        Yield the list of available assets
+        """
+        assets = await self.get_assets()
+        message = AssetsMessageModel(assets=assets)
+        rpc_message = RPCMessageModel(action="assets", message=message.model_dump())
+        yield rpc_message
+
+    async def rpc_subscribe(self) -> AsyncGenerator[RPCMessageModel, Any]:
         """
         Subscribe to the ExchangeRate data for the specified asset:
         get data for last 30 mins
         and listen to the new ExchangeRate records live
         """
-
-        # Yield the asset history points message
         exchange_rates = await self.get_exchange_rate_history()
+        if not exchange_rates:
+            yield single_error_rpc_response(action="points", error="No points to return")
+            return
+        
+        # Yield the asset history points message
         points = [
             ExchangeRatePointModel.from_exchange_rate(er) for er in exchange_rates
         ]
@@ -95,11 +131,6 @@ class ExchangeRateClientService:
         yield RPCMessageModel(action="asset_history", message=message.model_dump())
 
         # Yield new exchange rate points live
-        if not exchange_rates:
-            yield RPCMessageModel(
-                action="points", message={"errors": [{"msg": "No points to return"}]}
-            )
-            return
         last_er = exchange_rates[-1]
         while True:
             exchange_rate = await ExchangeRate.find_one(

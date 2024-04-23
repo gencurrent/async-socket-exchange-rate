@@ -134,7 +134,6 @@ async def exchange_rate(websocket: WebSocket):
                         await websocket.send_json(message.model_dump())
 
                 case "subscribe":
-                    await CONNECTIONS_MANAGER.send_message(websocket, f"Subscribed")
                     asset_id_field = "assetId"
                     asset_id = rpc_message.message.pop(asset_id_field, None)
                     if not asset_id:
@@ -154,7 +153,7 @@ async def exchange_rate(websocket: WebSocket):
                     client_service.asset = asset
 
                     async def yield_exchange_rate_messages():
-                        async for message in client_service.rpc_subscribe_message(
+                        async for message in client_service.rpc_subscribe(
                             websocket
                         ):
                             await websocket.send_json(message.model_dump())
@@ -171,14 +170,9 @@ async def exchange_rate(websocket: WebSocket):
                                 rpc_message.action == "subscribe"
                                 and isinstance(asset_id, int)
                             ):
-                                await websocket.send_json(
-                                    {
-                                        "errors": [
-                                            {
-                                                "msg": f"Invalid data format for asset switching"
-                                            }
-                                        ]
-                                    }
+                                await CONNECTIONS_MANAGER.send_message(
+                                    websocket,
+                                    single_error_rpc_response(rpc_message.action, f"`assetId` must be integer")
                                 )
                                 continue
                             asset = await Asset.find(
