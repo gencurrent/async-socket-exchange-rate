@@ -4,17 +4,23 @@ Exchange rate application router
 
 import asyncio
 from json.decoder import JSONDecodeError
-from typing import Any, Dict, List, Tuple
+from typing import Any, Coroutine, Dict, List
 
 
 from loguru import logger as _LOG
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ValidationError
 
-from db.models import Asset
-from exchange_rate.client_service import ExchangeRateClientService
-from rpc.models import RPCMessageModel, RPCErrorMessageModel
+from exchange_rate.client_service import (
+    AbstractExchangeRateClientService,
+    ExchangeRateClientService,
+)
+from exchange_rate.models import RPCSubscribeMessageModel
 from exchange_rate.utils import single_error_rpc_response
+from rpc.models import RPCMessageModel, RPCErrorMessageModel
+
+
+ASSET_ID_FIELD = "assetId"
 
 router = APIRouter()
 
@@ -32,10 +38,10 @@ class WebSocketConnectionManager:
     async def connect(self, websocket: WebSocket) -> None:
         """Initialize the connection with the client"""
         await websocket.accept()
-        client_service = ExchangeRateClientService()
+        client_service: AbstractExchangeRateClientService = ExchangeRateClientService()
         initial_state = {
             self.CLIENT_SERVICE: client_service,
-            self.LATEST_ACTION: None,   # str
+            self.LATEST_ACTION: None,  # str
         }
         self._connections[websocket] = initial_state
 
@@ -45,14 +51,12 @@ class WebSocketConnectionManager:
 
     def get_client_service(
         self, websocket: WebSocket
-    ) -> ExchangeRateClientService:
+    ) -> AbstractExchangeRateClientService:
         """Get the related ExchangeRateClientService"""
         service = self._connections[websocket][self.CLIENT_SERVICE]
         return service
-    
-    def get_latest_action(
-        self, websocket: WebSocket
-    ) -> str:
+
+    def get_latest_action(self, websocket: WebSocket) -> str:
         """Get the related ExchangeRateClientService"""
         action: str = self._connections[websocket][self.LATEST_ACTION]
         return action
@@ -62,12 +66,12 @@ class WebSocketConnectionManager:
         try:
             json_command = await websocket.receive_json()
         except JSONDecodeError:
-            await CONNECTIONS_MANAGER.send_message(
+            await CONNECTION_MANAGER.send_message(
                 websocket, "Could not parse the JSON command"
             )
             return None
         if not isinstance(json_command, dict):
-            await CONNECTIONS_MANAGER.send_message(
+            await CONNECTION_MANAGER.send_message(
                 websocket,
                 f"Invalid type of the message: {type(json_command)}."
                 ""
@@ -79,11 +83,8 @@ class WebSocketConnectionManager:
             self._connections[websocket][self.LATEST_ACTION] = rpc_message.action
             return rpc_message
         except ValidationError as exception:
-            errors = exception.errors()
             error_message = RPCErrorMessageModel.from_validation_error(exception)
-            await CONNECTIONS_MANAGER.send_message(
-                websocket, error_message.model_dump()
-            )
+            await CONNECTION_MANAGER.send_message(websocket, error_message)
             return None
 
     async def send_message(
@@ -109,7 +110,7 @@ class WebSocketConnectionManager:
             raise TypeError("Unsupported message type")
 
 
-CONNECTIONS_MANAGER = WebSocketConnectionManager()
+CONNECTION_MANAGER = WebSocketConnectionManager()
 
 
 @router.websocket("/")
@@ -117,82 +118,79 @@ async def exchange_rate(websocket: WebSocket):
     """
     Subscribe to relevant, up-to-date exchange rates
     """
-    await CONNECTIONS_MANAGER.connect(websocket)
-    client_service = CONNECTIONS_MANAGER.get_client_service(websocket)
+    await CONNECTION_MANAGER.connect(websocket)
+    client_service: AbstractExchangeRateClientService = (
+        CONNECTION_MANAGER.get_client_service(websocket)
+    )
     try:
         while True:
 
             rpc_message: RPCMessageModel | None = (
-                await CONNECTIONS_MANAGER.receive_command(websocket)
+                await CONNECTION_MANAGER.receive_command(websocket)
             )
             if not rpc_message:
                 continue
 
             match (rpc_message.action):
                 case "assets":
-                    async for message in client_service.rpc_assets_message():
-                        await websocket.send_json(message.model_dump())
-
+                    async for message in client_service.rpc_assets():
+                        await CONNECTION_MANAGER.send_message(websocket, message)
                 case "subscribe":
-                    await CONNECTIONS_MANAGER.send_message(websocket, f"Subscribed")
-                    asset_id_field = "assetId"
-                    asset_id = rpc_message.message.pop(asset_id_field, None)
-                    if not asset_id:
-                        await CONNECTIONS_MANAGER.send_message(
-                            websocket, f'parameter "{asset_id_field}" is missing'
-                        )
-                        continue
-                    # Fetch the Asset record
-                    asset = await Asset.find(Asset.id == asset_id).first_or_none()
-                    if not asset:
-                        await CONNECTIONS_MANAGER.send_message(
-                            websocket, f"The Asset with id={asset_id} is not found"
-                        )
-                        continue
-
-                    # Subscribe
-                    client_service.asset = asset
-
-                    async def yield_exchange_rate_messages():
-                        async for message in client_service.rpc_subscribe_message(
-                            websocket
-                        ):
-                            await websocket.send_json(message.model_dump())
-
-                    async def listen_to_asset_switch():
-                        while True:
-                            rpc_message = await CONNECTIONS_MANAGER.receive_command(
-                                websocket
-                            )
-                            if not rpc_message:
-                                continue
-                            asset_id = rpc_message.message.pop(asset_id_field, None)
-                            if not (
-                                rpc_message.action == "subscribe"
-                                and isinstance(asset_id, int)
-                            ):
-                                await websocket.send_json(
-                                    {
-                                        "errors": [
-                                            {
-                                                "msg": f"Invalid data format for asset switching"
-                                            }
-                                        ]
-                                    }
-                                )
-                                continue
-                            asset = await Asset.find(
-                                Asset.id == asset_id
-                            ).first_or_none()
-                            client_service.asset = asset
-                            continue
-
-                    await asyncio.gather(
-                        yield_exchange_rate_messages(),
-                        listen_to_asset_switch(),
-                    )
+                    await handle_subscribe_action(websocket, rpc_message)
                 case _:
-                    error_message = single_error_rpc_response(rpc_message.action, "Unknown action")
-                    await CONNECTIONS_MANAGER.send_message(websocket, error_message)
+                    error_message = single_error_rpc_response(
+                        rpc_message.action, "Unknown action"
+                    )
+                    await CONNECTION_MANAGER.send_message(websocket, error_message)
     except WebSocketDisconnect:
-        CONNECTIONS_MANAGER.disconnect(websocket)
+        CONNECTION_MANAGER.disconnect(websocket)
+
+
+async def handle_subscribe_action(
+    websocket: WebSocket, rpc_message: RPCMessageModel
+) -> Coroutine[Any, Any, None]:
+
+    try:
+        rpc_subscribe_message_model = RPCSubscribeMessageModel(**rpc_message.message)
+    except ValidationError as exception:
+        error_message = RPCErrorMessageModel.from_validation_error(exception)
+        await CONNECTION_MANAGER.send_message(websocket, error_message)
+        return
+
+    # Subscribe
+    client_service: AbstractExchangeRateClientService = (
+        CONNECTION_MANAGER.get_client_service(websocket)
+    )
+    error_message = await client_service.rpc_switch_asset_id(
+        rpc_subscribe_message_model.asset_id
+    )
+    if error_message:
+        await CONNECTION_MANAGER.send_message(websocket, error_message)
+        return
+
+    async def yield_exchange_rate_messages():
+        async for message in client_service.rpc_subscribe():
+            await CONNECTION_MANAGER.send_message(websocket, message)
+
+    async def listen_to_asset_switch():
+        while True:
+            rpc_message = await CONNECTION_MANAGER.receive_command(websocket)
+            if not rpc_message:
+                continue
+            asset_id = rpc_message.message.pop(ASSET_ID_FIELD, None)
+            if not (rpc_message.action == "subscribe" and isinstance(asset_id, int)):
+                response = single_error_rpc_response(
+                    rpc_message.action, f"`{ASSET_ID_FIELD}` must be integer"
+                )
+                await CONNECTION_MANAGER.send_message(websocket, response)
+                continue
+
+            error_message = await client_service.rpc_switch_asset_id(asset_id)
+            if error_message:
+                await CONNECTION_MANAGER.send_message(websocket, error_message)
+                continue
+
+    await asyncio.gather(
+        yield_exchange_rate_messages(),
+        listen_to_asset_switch(),
+    )
