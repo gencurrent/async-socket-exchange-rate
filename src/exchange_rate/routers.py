@@ -131,8 +131,10 @@ async def exchange_rate(websocket: WebSocket):
                 case "subscribe":
                     await handle_subscribe_action(websocket, rpc_message)
                 case _:
-                    error_message = single_error_rpc_response(rpc_message.action, "Unknown action")
-                    await CONNECTION_MANAGER.send_message(websocket, error_message)
+                    error_rpc_response = single_error_rpc_response(
+                        rpc_message.action, "Unknown action"
+                    )
+                    await CONNECTION_MANAGER.send_message(websocket, error_rpc_response)
     except WebSocketDisconnect:
         CONNECTION_MANAGER.disconnect(websocket)
 
@@ -167,10 +169,10 @@ async def handle_subscribe_action(
                 continue
             asset_id = rpc_message.message.pop(ASSET_ID_FIELD, None)
             if not (rpc_message.action == "subscribe" and isinstance(asset_id, int)):
-                response = single_error_rpc_response(
+                error_rpc_response = single_error_rpc_response(
                     rpc_message.action, f"`{ASSET_ID_FIELD}` must be integer"
                 )
-                await CONNECTION_MANAGER.send_message(websocket, response)
+                await CONNECTION_MANAGER.send_message(websocket, error_rpc_response)
                 continue
 
             error_message = await client_service.rpc_switch_asset_id(asset_id)
