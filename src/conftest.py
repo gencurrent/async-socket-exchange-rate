@@ -35,7 +35,7 @@ async def db():
     """Use db"""
     from db.database import initialize_database
 
-    db = await initialize_database()
+    db = await initialize_database(multiprocessing_mode=True)
     yield db
     await db.client.drop_database(db)
 

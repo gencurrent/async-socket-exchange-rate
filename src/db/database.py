@@ -26,22 +26,25 @@ def get_database() -> AsyncIOMotorDatabase:
     database = client[settings.MONGO_DB_NAME]
 
 
-async def initialize_database(skip_indexes: bool = False) -> AsyncIOMotorDatabase:
+async def initialize_database(
+    skip_indexes: bool = False,
+    multiprocessing_mode: bool = False,
+) -> AsyncIOMotorDatabase:
     """
     Initialize the database connection and integrate it with Beanie
     """
     client = AsyncIOMotorClient(settings.DATABASE_URI)
     database = client[settings.MONGO_DB_NAME]
 
-    if skip_indexes:
-        await IndexlessBeaineInitializer(
-            database=database,
-            document_models=db_models.__all__,
-        )
-        return database
-
-    await init_beanie(
+    init_kwargs = dict(
         database=database,
         document_models=db_models.__all__,
+        multiprocessing_mode=multiprocessing_mode,
     )
+
+    if skip_indexes:
+        await IndexlessBeaineInitializer(**init_kwargs)
+        return database
+
+    await init_beanie(**init_kwargs)
     return database

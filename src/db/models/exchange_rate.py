@@ -97,4 +97,10 @@ class ExchangeRate(Document):
                 ],
                 name="asset",
             ),
+            pymongo.IndexModel(
+                [
+                    ("time", pymongo.DESCENDING),
+                ],
+                name="time",
+            ),
         ]

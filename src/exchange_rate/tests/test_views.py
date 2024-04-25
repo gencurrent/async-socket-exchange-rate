@@ -7,6 +7,8 @@ from fastapi import WebSocket
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
+from db.models import Asset
+
 
 @pytest.mark.asyncio
 async def test_socket__invalid_input(test_client: TestClient) -> None:
@@ -46,24 +48,22 @@ async def test_socket__unknown_action(test_client: TestClient) -> None:
     assert message == {"errors": [{"msg": "Unknown action"}]}
 
 
-@pytest.mark.skip(
-    reason="Async websockets are not supported yet in FastAPI. "
-    "The potential workaround solutions require additional research"
-)
 @pytest.mark.asyncio
 async def test_socket__assets(assets, test_client: TestClient) -> None:
     """
     Test the websocket: "assets" action to list the available assets
     """
+
     with test_client.websocket_connect("/") as ws:
         ws.send_json({"action": "assets", "message": {}})
         response = ws.receive_json()
 
-    errors = response["errors"]
-    msg = errors[0]
-    assert msg["loc"] == "action"
-    assert (
-        msg["msg"]
-        == "Value error, the action is not supported. The supported actions are ('assets', 'subscribe')"
-    )
-    assert msg["input"] == "unknown"
+    assert "action" in response
+    assert response["action"] == "assets"
+
+    assert "message" in response
+    message = response["message"]
+    assert "assets" in message
+    assets = message["assets"]
+    db_assets = await Asset.find_assets_from_settings().to_list()
+    assert assets == [db_asset.model_dump() for db_asset in db_assets]

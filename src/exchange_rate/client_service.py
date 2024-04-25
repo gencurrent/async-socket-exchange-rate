@@ -101,13 +101,17 @@ class ExchangeRateClientService:
         yield RPCMessageModel(action="asset_history", message=message.model_dump())
 
         # Yield new exchange rate points live
-        last_er = exchange_rates[-1]
+        last_er = exchange_rates[0]
         while True:
-            exchange_rate = await ExchangeRate.find_one(
-                ExchangeRate.asset.id == self.asset.id,
-                fetch_links=True,
-                sort=[("time", DESCENDING)],
+            exchange_rate = (
+                await ExchangeRate.find(
+                    ExchangeRate.asset.id == self.asset.id,
+                )
+                .sort(-ExchangeRate.time)
+                .first_or_none()
             )
+            # NOTE: Setting `asset` is much faster than fetching links inside the query
+            exchange_rate.asset = self.asset
 
             if exchange_rate and last_er.id != exchange_rate.id:
                 last_er = exchange_rate

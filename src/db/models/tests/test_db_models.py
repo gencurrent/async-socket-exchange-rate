@@ -102,8 +102,8 @@ async def test_exchange_rate_model__get_create(db):
 @pytest.mark.asyncio
 async def test_exchange_rate_model__conditional_create(db):
     """Test the exchange rate model on upserting"""
-    # Create if not exists
 
+    # Init assets in-test
     await Asset.initialize_assets()
     assets = await Asset.find().to_list()
     asset = assets[0]
