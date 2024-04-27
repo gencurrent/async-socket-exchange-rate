@@ -16,14 +16,14 @@ from exchange_rate.models import (
     ExchangeRatePointModel,
 )
 from exchange_rate.utils import single_error_rpc_response
-from rpc.models import RPCErrorMessageModel, RPCMessageModel
+from rpc.models import RPCErrorMessageModel, RPCCommandModel
 
 
 class AbstractExchangeRateClientService(abc.ABC):
     """Abstract exchange rate per client service"""
 
     @abc.abstractmethod
-    async def rpc_assets(self) -> AsyncGenerator[RPCMessageModel, Any]:
+    async def rpc_assets(self) -> AsyncGenerator[RPCCommandModel, Any]:
         """
         Yield the list of available assets
         """
@@ -36,7 +36,7 @@ class AbstractExchangeRateClientService(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def rpc_subscribe(self) -> AsyncGenerator[RPCMessageModel, Any]:
+    async def rpc_subscribe(self) -> AsyncGenerator[RPCCommandModel, Any]:
         """
         Subscribe to the ExchangeRate data for the specified asset:
             get data for last 30 mins;
@@ -53,7 +53,7 @@ class ExchangeRateClientService(AbstractExchangeRateClientService):
         """A new instance of ExchangeRateClientService"""
         self._asset: Asset | None = None
 
-    async def rpc_switch_asset_id(self, asset_id: int | None) -> RPCMessageModel | None:
+    async def rpc_switch_asset_id(self, asset_id: int | None) -> RPCCommandModel | None:
         """
         Set a new asset_id
         :param int | None asset_id: asset ID. Turn off listening if asset_id is None
@@ -69,16 +69,16 @@ class ExchangeRateClientService(AbstractExchangeRateClientService):
             )
         self._asset = asset
 
-    async def rpc_assets(self) -> AsyncGenerator[RPCMessageModel, Any]:
+    async def rpc_assets(self) -> AsyncGenerator[RPCCommandModel, Any]:
         """
         Yield the list of available assets
         """
         assets = await self._get_assets()
         message = AssetsMessageModel(assets=assets)
-        rpc_message = RPCMessageModel(action="assets", message=message.model_dump())
+        rpc_message = RPCCommandModel(action="assets", message=message.model_dump())
         yield rpc_message
 
-    async def rpc_subscribe(self) -> AsyncGenerator[RPCMessageModel, Any]:
+    async def rpc_subscribe(self) -> AsyncGenerator[RPCCommandModel, Any]:
         """
         Subscribe to the ExchangeRate data for the specified asset:
         get data for last 30 mins
@@ -92,7 +92,7 @@ class ExchangeRateClientService(AbstractExchangeRateClientService):
         # Yield the asset history points message
         points = [ExchangeRatePointModel.from_exchange_rate(er) for er in exchange_rates]
         message = ExchangeRateAssetHistoryMessageModel(points=points)
-        yield RPCMessageModel(action="asset_history", message=message.model_dump())
+        yield RPCCommandModel(action="asset_history", message=message.model_dump())
 
         # Yield new exchange rate points live
         last_er = exchange_rates[0]
@@ -110,7 +110,7 @@ class ExchangeRateClientService(AbstractExchangeRateClientService):
             if exchange_rate and last_er.id != exchange_rate.id:
                 last_er = exchange_rate
                 message = ExchangeRatePointModel.from_exchange_rate(last_er)
-                yield RPCMessageModel(action="point", message=message.model_dump())
+                yield RPCCommandModel(action="point", message=message.model_dump())
 
             sleep_timedelta = last_er.time + 1 - datetime.now().timestamp()
             if sleep_timedelta > 0:

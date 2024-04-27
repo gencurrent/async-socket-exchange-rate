@@ -11,7 +11,7 @@ from db.models import Asset, ExchangeRate
 
 class RPCSubscribeMessageModel(BaseModel):
     """
-    Data model contained in the `message` field of the RPCMessageModel to handle `subscribe`
+    Data model contained in the `message` field of the RPCCommandModel to handle `subscribe`
     """
 
     asset_id: int = Field(alias="assetId", description="ID of the related Asset")

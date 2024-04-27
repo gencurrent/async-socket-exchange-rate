@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 
-class RPCMessageModel(BaseModel):
+class RPCCommandModel(BaseModel):
     """General RPC call (input / output) messsage format model"""
 
     action: str = Field(description="Action name")
@@ -45,7 +45,7 @@ class RPCErrorMessageModel(BaseModel):
 class RPCClientState(BaseModel):
     """General RPC call (input / output) messsage format model"""
 
-    latest_command: RPCMessageModel | None = Field(
+    latest_command: RPCCommandModel | None = Field(
         default=None,
         description="The previous successfully handled RPC command",
     )

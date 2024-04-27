@@ -16,7 +16,7 @@ from exchange_rate.client_service import (
 )
 from exchange_rate.models import RPCSubscribeMessageModel
 from exchange_rate.utils import single_error_rpc_response
-from rpc.models import RPCErrorMessageModel, RPCMessageModel, RPCClientState
+from rpc.models import RPCErrorMessageModel, RPCCommandModel, RPCClientState
 
 ASSET_ID_FIELD = "assetId"
 
@@ -51,12 +51,12 @@ class WebSocketConnectionManager:
         service: AbstractExchangeRateClientService = self._connections[websocket].client_service
         return service
 
-    def get_last_rpc_command(self, websocket: WebSocket) -> RPCMessageModel:
+    def get_last_rpc_command(self, websocket: WebSocket) -> RPCCommandModel:
         """Get the related ExchangeRateClientService"""
         rpc_command = self._connections[websocket].latest_command
         return rpc_command
 
-    def set_last_rpc_command(self, websocket: WebSocket, rpc_command: RPCMessageModel):
+    def set_last_rpc_command(self, websocket: WebSocket, rpc_command: RPCCommandModel):
         """Get the related ExchangeRateClientService"""
         self._connections[websocket].latest_command = rpc_command
 
@@ -77,7 +77,7 @@ class WebSocketConnectionManager:
             if task and not task.done():
                 task.cancel()
 
-    async def receive_command(self, websocket: WebSocket) -> RPCMessageModel | None:
+    async def receive_command(self, websocket: WebSocket) -> RPCCommandModel:
         """Read the incoming JSON RPC command until a valid command is received"""
         while True:
             try:
@@ -93,7 +93,7 @@ class WebSocketConnectionManager:
                 )
                 continue
             try:
-                rpc_command = RPCMessageModel(**json_command)
+                rpc_command = RPCCommandModel(**json_command)
             except ValidationError as exception:
                 error_message = RPCErrorMessageModel.from_validation_error(exception)
                 await CONNECTION_MANAGER.send_message(websocket, error_message)
@@ -141,9 +141,7 @@ async def wait_and_handle_rpc_message(websocket: WebSocket) -> None:
     """
     Wawit and handle a new incoming RPC message
     """
-    rpc_message: RPCMessageModel | None = await CONNECTION_MANAGER.receive_command(websocket)
-    if not rpc_message:
-        return
+    rpc_message: RPCCommandModel = await CONNECTION_MANAGER.receive_command(websocket)
 
     client_service: AbstractExchangeRateClientService = CONNECTION_MANAGER.get_client_service(
         websocket
@@ -169,7 +167,7 @@ async def wait_and_handle_rpc_message(websocket: WebSocket) -> None:
 
 
 async def handle_subscribe_action(
-    websocket: WebSocket, rpc_message: RPCMessageModel
+    websocket: WebSocket, rpc_message: RPCCommandModel
 ) -> asyncio.Task | None:
     try:
         rpc_subscribe_message_model = RPCSubscribeMessageModel(**rpc_message.message)
