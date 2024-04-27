@@ -2,14 +2,13 @@
 General RPC models
 """
 
+import asyncio
 from typing import Any, Dict, List
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
-
-from db.models import ExchangeRate
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 
-class RPCMessageModel(BaseModel):
+class RPCCommandModel(BaseModel):
     """General RPC call (input / output) messsage format model"""
 
     action: str = Field(description="Action name")
@@ -41,3 +40,21 @@ class RPCErrorMessageModel(BaseModel):
                 }
             )
         return RPCErrorMessageModel(errors=result_errors)
+
+
+class RPCClientState(BaseModel):
+    """General RPC call (input / output) messsage format model"""
+
+    latest_command: RPCCommandModel | None = Field(
+        default=None,
+        description="The previous successfully handled RPC command",
+    )
+    client_service: Any = Field(
+        description="AbstractExchangeRateClientService instance for the client connection",
+    )
+    tasks: List[asyncio.Task] = Field(
+        default_factory=list,
+        description="The list of async task",
+    )
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
