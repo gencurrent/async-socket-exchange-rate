@@ -19,14 +19,14 @@ from db.database import initialize_database
 EMCONT_SERVICE = EmcontService()
 
 
-async def get_and_save_exchnage_rates(task_id):
+async def get_and_save_exchnage_rates():
     await EMCONT_SERVICE.get_and_save_exchange_rates()
 
 
 async def periodic(
+    coroutine: Coroutine[Any, Any, Any],
     interval_seconds: float | int = 1,
     pre_sleep_seconds: float | int = 0,
-    async_function: Coroutine = None,
     args: Sequence[Any] | None = None,
     kwargs: Mapping[str, Any] | None = None,
 ):
@@ -34,7 +34,7 @@ async def periodic(
     Periodic execution function
     :param float | int interval_seconds: interval before tasks finishing the task and executing it again
     :param float | int pre_sleep_seconds: sleep asynhronously before starting the task
-    :param Coroutine async_function: the async function
+    :param Coroutine[Any, Any, Any] coroutine: the async function
     :param Sequence[Any] args: positional arguments to pass to `async_function`
     :param Mapping[str, Any] args: key arguments to pass to `async_function`
     """
@@ -44,7 +44,7 @@ async def periodic(
     while True:
         # await the target
         try:
-            await async_function(*args, **kwargs)
+            await coroutine(*args, **kwargs)
         except Exception as exc:
             _LOG.error(exc)
             raise exc
@@ -64,10 +64,9 @@ async def main():
             for idx in range(NUMBER_OF_TASKS):
                 task = task_group.create_task(
                     periodic(
+                        coroutine=get_and_save_exchnage_rates,
                         interval_seconds=0.5,
                         pre_sleep_seconds=(idx / NUMBER_OF_TASKS),
-                        async_function=get_and_save_exchnage_rates,
-                        args=(idx,),
                     )
                 )
                 task_set.add(task)

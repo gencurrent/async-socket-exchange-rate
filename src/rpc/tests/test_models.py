@@ -14,11 +14,11 @@ async def test_rpc_message_model():
     Test RPCMessage model
     """
     # Valid RPC message
-    RPCCommandModel(action="assets", message={}, message2={})
+    RPCCommandModel(action="assets", message={}, message2={})  # type: ignore
 
     # `message` is of invalid type
     with pytest.raises(ValidationError) as exception:
-        RPCCommandModel(action="assets", message="", message2="")
+        RPCCommandModel(action="assets", message="", message2="")  # type: ignore
 
     original_exception = exception.value
     errors = original_exception.errors()
@@ -28,7 +28,7 @@ async def test_rpc_message_model():
 
     # `message` is not supplied
     with pytest.raises(ValidationError) as exception:
-        RPCCommandModel(action="assets")
+        RPCCommandModel(action="assets")  # type: ignore
 
     original_exception = exception.value
     errors = original_exception.errors()

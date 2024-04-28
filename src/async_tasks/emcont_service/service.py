@@ -13,7 +13,7 @@ from loguru import logger as _LOG
 from pymongo.errors import DuplicateKeyError
 
 from async_tasks.emcont_service.models import EmcontExchangeRate
-from db.models import Asset, ExchangeRate
+from db.models.exchange_rate import Asset, ExchangeRate
 from settings import settings
 
 
@@ -40,6 +40,8 @@ class EmcontService:
         Extract array of exchange rates from the endpoint response text
         """
         match = self._regex_comp.match(text)
+        if not match:
+            raise Exception("Can not extract data from the resource content")
         content = match["content"]
         json_content = json.loads(content)
         rates = json_content["Rates"]

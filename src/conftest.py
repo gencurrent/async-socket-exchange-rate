@@ -3,7 +3,7 @@ The main conftest file
 """
 
 from datetime import datetime
-from typing import List
+from typing import AsyncGenerator, List
 from unittest.mock import Mock, patch
 
 import pytest
@@ -12,18 +12,18 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from core.constants import EURUSD
-from db.models import Asset, ExchangeRate
+from db.models.exchange_rate import Asset, ExchangeRate
 from settings.settings import Settings
 
 
 @pytest.fixture(scope="session", autouse=True)
 def test_settings():
     settings_mock = Mock(spec=Settings)
-    settings_instance = Settings()
+    settings_instance = Settings()  # type: ignore
     for field in settings_instance.model_fields_set:
         value = getattr(settings_instance, field)
         setattr(settings_mock, field, value)
-    settings_mock.MONGO_DB_NAME = f"{Settings().MONGO_DB_NAME}_test"
+    settings_mock.MONGO_DB_NAME = f"{settings_instance.MONGO_DB_NAME}_test"
 
     with patch("settings.settings.Settings.__new__", lambda self: settings_mock):
         with patch("settings.settings", settings_mock):
@@ -50,7 +50,7 @@ async def test_client(db) -> TestClient:
 
 
 @pytest_asyncio.fixture()
-async def test_async_client(db) -> AsyncClient:
+async def test_async_client(db) -> AsyncGenerator[AsyncClient, None]:
     """Yield an test requests client"""
     from app import app
 
@@ -66,7 +66,7 @@ async def assets(db) -> List[Asset]:
 
 
 @pytest_asyncio.fixture()
-async def asset(assets) -> Asset:
+async def asset(assets) -> Asset | None:
     """Fixture of a single Asset instance"""
     return await Asset.find_one(Asset.name == EURUSD)
 

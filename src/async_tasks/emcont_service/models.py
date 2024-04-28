@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from db.models import Asset, ExchangeRate
+from db.models.exchange_rate import Asset, ExchangeRate
 
 
 class EmcontExchangeRate(BaseModel):

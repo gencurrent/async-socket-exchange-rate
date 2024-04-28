@@ -12,7 +12,7 @@ from pymongo.errors import DuplicateKeyError
 from pymongo.results import UpdateResult
 
 from core.constants import EURUSD
-from db.models import Asset, ExchangeRate
+from db.models.exchange_rate import Asset, ExchangeRate
 from db.models.exceptions import AlreadyPopulatedException
 from settings import settings
 
@@ -93,6 +93,7 @@ async def test_exchange_rate_model__get_create(db):
             value=value,
         ).create()
     error = exc.value
+    assert error.details is not None
     assert error.details["keyValue"] == {
         "asset": DBRef("asset", 1),
         "time": now_timestamp,
@@ -143,6 +144,8 @@ async def test_exchange_rate_model__conditional_create(db):
     )
 
     assert update_result.upserted_id is None
+    assert update_result.raw_result is not None
     assert update_result.raw_result["updatedExisting"] is True
-    exchange_rate = await ExchangeRate.find(fetch_links=True).first_or_none()
-    assert exchange_rate.value == new_value
+    fetched_exchange_rate: ExchangeRate | None = await ExchangeRate.find_one(fetch_links=True)
+    assert fetched_exchange_rate is not None
+    assert fetched_exchange_rate.value == new_value
