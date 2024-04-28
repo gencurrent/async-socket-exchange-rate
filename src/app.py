@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from loguru import logger as _LOG
 
 from db.database import initialize_database
-from db.models import Asset
+from db.models.exchange_rate import Asset
 from exchange_rate.routers import router as exchange_rate_router
 
 

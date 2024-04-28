@@ -25,11 +25,11 @@ class Asset(Document):
     - asset documents will be crated only once
     """
 
-    id: int  # Immutable
-    name: Indexed(str, unique=True) = Field()
+    id: int  # type: ignore
+    name: Indexed(str, unique=True) = Field()  # type: ignore
 
     @classmethod
-    async def initialize_assets(cls, raise_exception=True) -> InsertManyResult:
+    async def initialize_assets(cls, raise_exception=True) -> InsertManyResult | None:
         """
         Initialize the list of assets from the settings
         :returns InsertManyResult: The insertion result
@@ -48,11 +48,12 @@ class Asset(Document):
         except BulkWriteError as exc:
             if raise_exception:
                 raise AlreadyPopulatedException from exc
+        return None
 
     @staticmethod
     def find_assets_from_settings() -> FindMany:
         """Find assets from the asset list in settings"""
-        return Asset.find(In(Asset.name, settings.ASSET_LIST)).sort(+Asset.id)
+        return Asset.find(In(Asset.name, settings.ASSET_LIST)).sort(+Asset.id)  # type: ignore
 
     class Settings:
         """Collection settings"""

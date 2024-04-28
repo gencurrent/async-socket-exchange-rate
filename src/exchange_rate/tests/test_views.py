@@ -7,7 +7,7 @@ from fastapi import WebSocket
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from db.models import Asset
+from db.models.exchange_rate import Asset
 
 
 @pytest.mark.asyncio

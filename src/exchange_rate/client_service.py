@@ -9,7 +9,7 @@ from typing import Any, AsyncGenerator, Coroutine, List
 
 from pymongo import DESCENDING
 
-from db.models import Asset, ExchangeRate
+from db.models.exchange_rate import Asset, ExchangeRate
 from exchange_rate.models import (
     AssetsMessageModel,
     ExchangeRateAssetHistoryMessageModel,
@@ -23,13 +23,13 @@ class AbstractExchangeRateClientService(abc.ABC):
     """Abstract exchange rate per client service"""
 
     @abc.abstractmethod
-    async def rpc_assets(self) -> AsyncGenerator[RPCCommandModel, Any]:
+    async def rpc_assets(self) -> RPCCommandModel:
         """
-        Yield the list of available assets
+        Get the list of available assets
         """
 
     @abc.abstractmethod
-    async def rpc_switch_asset_id(self, asset_id: int) -> Coroutine:
+    async def rpc_switch_asset_id(self, asset_id: int | None) -> RPCErrorMessageModel | None:
         """
         Set the new asset by ID
         :param int asset_id: ID of the asset
@@ -53,7 +53,7 @@ class ExchangeRateClientService(AbstractExchangeRateClientService):
         """A new instance of ExchangeRateClientService"""
         self._asset: Asset | None = None
 
-    async def rpc_switch_asset_id(self, asset_id: int | None) -> RPCCommandModel | None:
+    async def rpc_switch_asset_id(self, asset_id: int | None) -> RPCErrorMessageModel | None:
         """
         Set a new asset_id
         :param int | None asset_id: asset ID. Turn off listening if asset_id is None
@@ -61,24 +61,25 @@ class ExchangeRateClientService(AbstractExchangeRateClientService):
         # Fetch the Asset record
         if asset_id is None:
             self._asset = None
-            return
+            return None
         asset = await Asset.find_one(Asset.id == asset_id)
         if not asset:
-            return single_error_rpc_response(
-                action="subscribe", error=f"Asset with id={asset_id} does not exist"
+            return RPCErrorMessageModel(
+                errors=[{"msg": f"Asset with id={asset_id} does not exist"}]
             )
         self._asset = asset
+        return None
 
-    async def rpc_assets(self) -> AsyncGenerator[RPCCommandModel, Any]:
+    async def rpc_assets(self) -> RPCCommandModel:
         """
-        Yield the list of available assets
+        Get the list of available assets
         """
         assets = await self._get_assets()
         message = AssetsMessageModel(assets=assets)
         rpc_message = RPCCommandModel(action="assets", message=message.model_dump())
-        yield rpc_message
+        return rpc_message
 
-    async def rpc_subscribe(self) -> AsyncGenerator[RPCCommandModel, Any]:
+    async def rpc_subscribe(self) -> AsyncGenerator[RPCCommandModel, Any]:  # type: ignore
         """
         Subscribe to the ExchangeRate data for the specified asset:
         get data for last 30 mins
@@ -104,13 +105,15 @@ class ExchangeRateClientService(AbstractExchangeRateClientService):
                 .sort(-ExchangeRate.time)
                 .first_or_none()
             )
-            # NOTE: Setting `asset` is much faster than fetching links inside the query
-            exchange_rate.asset = self._asset
 
             if exchange_rate and last_er.id != exchange_rate.id:
+                # NOTE: Setting `asset` is much faster than fetching links inside the query
+                exchange_rate.asset = self._asset
                 last_er = exchange_rate
-                message = ExchangeRatePointModel.from_exchange_rate(last_er)
-                yield RPCCommandModel(action="point", message=message.model_dump())
+                yield RPCCommandModel(
+                    action="point",
+                    message=ExchangeRatePointModel.from_exchange_rate(last_er).model_dump(),
+                )
 
             sleep_timedelta = last_er.time + 1 - datetime.now().timestamp()
             if sleep_timedelta > 0:
@@ -120,6 +123,8 @@ class ExchangeRateClientService(AbstractExchangeRateClientService):
 
     async def get_exchange_rate_history(self) -> List[ExchangeRate]:
         # Return the past 30 minutes ExchangeRates
+        if not self._asset:
+            return []
         timestamp_from = int((datetime.now() - timedelta(minutes=30)).timestamp())
         exchange_rates = (
             await ExchangeRate.find(

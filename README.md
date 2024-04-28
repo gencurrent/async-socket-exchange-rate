@@ -15,27 +15,27 @@ Subscribe to the server by sending a websocket connection message
 
 ### Using Docker
 
-Pull the images
+Pull the images   
 `docker compose pull`
 
-Build the images
+Build the images   
 `docker compose build`
 
-Run the docker compose configuration
+Run the docker compose configuration   
 `docker compose up`
 
 ### Asynchronous tasks
 
-Run asynchornous tasks manually:
-`docker compose exec backend bash`
-`poetry run python async_tasks/async_periodic_tasks.py`
+Run asynchornous tasks manually:   
+`docker compose exec backend bash`   
+`poetry run python async_tasks/async_periodic_tasks.py`   
 
 ### Mongo
-Connect to the Mongo DB instance:
-`docker compose exec db sh`
-`mongosh $MONGO_CONNECTION_URI`
-`show dbs`  to list all the databases
-`use db`  to switch to the backend database
+Connect to the Mongo DB instance:   
+`docker compose exec db sh`    
+`mongosh $MONGO_CONNECTION_URI`   
+`show dbs`  to list all the databases   
+`use db`  to switch to the backend database   
 
 
 ## Websocket actions
@@ -150,7 +150,12 @@ A MongoDB DBMS instance to store and serve the application data in form of docum
 
 ## Contribute
 
-Install pre-commit
+Install pre-commit   
 `poetry add pre-commit`
-Init pre-commit by installing the hooks
+
+Init pre-commit by installing the hooks   
 `poetry run pre-commit install`
+
+
+Test with Mypy against the code (`src/`) depending on the automatically imported `mypy.ini` file:   
+`poetry run mypy src`

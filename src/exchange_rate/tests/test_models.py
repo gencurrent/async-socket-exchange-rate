@@ -4,7 +4,7 @@ Test Exchange Rate pydantic models
 
 import pytest
 
-from db.models import ExchangeRate
+from db.models.exchange_rate import Asset, ExchangeRate
 from exchange_rate.models import ExchangeRateAssetHistoryMessageModel, ExchangeRatePointModel
 
 
@@ -16,6 +16,7 @@ def test_exchange_rate_point_model__json(exchange_rate: ExchangeRate):
     instance = ExchangeRatePointModel.from_exchange_rate(exchange_rate)
     data = instance.model_dump()
 
+    assert isinstance(exchange_rate.asset, Asset)
     assert data["assetName"] == exchange_rate.asset.name
     assert data["assetId"] == exchange_rate.asset.id
     assert data["time"] == exchange_rate.time

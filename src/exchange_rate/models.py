@@ -6,7 +6,7 @@ from typing import List
 
 from pydantic import BaseModel, Field, field_validator
 
-from db.models import Asset, ExchangeRate
+from db.models.exchange_rate import Asset, ExchangeRate
 
 
 class RPCSubscribeMessageModel(BaseModel):
@@ -29,11 +29,15 @@ class ExchangeRatePointModel(BaseModel):
     def from_exchange_rate(cls, exchange_rate: ExchangeRate) -> "ExchangeRatePointModel":
         """
         Yield an ExchangeRatePointModel instance from ExchangeRate
+        :raises ValueError: if exchange_rate.asset is in the DBLink state
         """
+        if not isinstance(exchange_rate.asset, Asset):
+            raise ValueError("No Asset assigned to the ExchangeRate object while converting")
+        asset = exchange_rate.asset
         result = cls(
-            asset_name=exchange_rate.asset.name,
+            asset_name=asset.name,
             time=exchange_rate.time,
-            asset_id=exchange_rate.asset.id,
+            asset_id=asset.id,  # type: ignore
             value=exchange_rate.value,
         )
         return result
